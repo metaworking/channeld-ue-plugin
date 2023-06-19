@@ -342,10 +342,14 @@ FString FReplicatedActorDecorator::GetDefinition_ProtoStateMessage()
 		FieldDefinitions.Append(TEXT("bool removed = 1;"));
 		Offset = 2;
 	}
+	int32 ProtoIndex = Offset;
 	for (int32 i = 0; i < Properties.Num(); i++)
 	{
 		const TSharedPtr<FPropertyDecorator> Property = Properties[i];
-		FieldDefinitions += Property->GetDefinition_ProtoField(i + Offset) + TEXT(";\n");
+		FString ProtoField = Property->GetDefinition_ProtoField(ProtoIndex) + TEXT(";\n");
+		FieldDefinitions += ProtoField;
+		ProtoIndex++;
+	
 	}
 	FStringFormatNamedArguments FormatArgs;
 	FormatArgs.Add(TEXT("Declare_StateMessageType"), GetProtoStateMessageType());

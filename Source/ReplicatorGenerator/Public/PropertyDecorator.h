@@ -186,7 +186,7 @@ public:
 	 * For example:
 	 *   optional bool bIsCrouched = 6
 	 */
-	virtual FString GetDefinition_ProtoField(int32 FieldNumber);
+	virtual FString GetDefinition_ProtoField(int32& FieldNumber);
 
 	/**
 	 * Code that getting property value from outer actor

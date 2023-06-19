@@ -133,7 +133,7 @@ FString FPropertyDecorator::GetDefinition_ProtoField()
 	return FString(FieldRule.IsEmpty() ? TEXT("") : FieldRule + SpaceChar) + GetProtoFieldType() + SpaceChar + GetProtoFieldName();
 }
 
-FString FPropertyDecorator::GetDefinition_ProtoField(int32 FieldNumber)
+FString FPropertyDecorator::GetDefinition_ProtoField(int32& FieldNumber)
 {
 	return GetDefinition_ProtoField() + TEXT(" = ") + FString::FromInt(FieldNumber);
 }

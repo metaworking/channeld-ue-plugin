@@ -102,6 +102,7 @@ FString FArrayPropertyDecorator::GetCode_HasProtoFieldValueIn(const FString& Sta
 FString FArrayPropertyDecorator::GetCode_OnStateChange(const FString& TargetInstanceName, const FString& NewStateName, bool NeedCallRepNotify)
 {
 	FStringFormatNamedArguments FormatArgs;
+	FormatArgs.Add(TEXT("Code_GetProtoUpdateValue"), FString::Printf(TEXT("%s->update_%s()"), *NewStateName, *GetProtoFieldName()));
 	FormatArgs.Add(TEXT("Code_HasProtoFieldValue"), GetCode_HasProtoFieldValueIn(NewStateName));
 	FormatArgs.Add(
 		TEXT("Code_SetPropertyValue"),
@@ -174,4 +175,12 @@ TArray<TSharedPtr<FStructPropertyDecorator>> FArrayPropertyDecorator::GetStructP
 		}
 	}
 	return NonRepetitionStructPropertyDecorators;
+}
+
+FString FArrayPropertyDecorator::GetDefinition_ProtoField(int32& FieldNumber)
+{
+	FString FieldDefinitions = FString::Printf(TEXT("bool update_%s = %d;\n"), *GetProtoFieldName(), FieldNumber);
+	FieldNumber++;
+	FieldDefinitions += FPropertyDecorator::GetDefinition_ProtoField(FieldNumber);
+	return FieldDefinitions;
 }
