@@ -5,7 +5,7 @@ const static TCHAR* UObjPropDeco_SetDeltaStateArrayInnerTemp =
 	LR"EOF(
 UObject * & PropItem = (*{Declare_PropertyPtr})[i];
 unrealpb::UnrealObjectRef* NewOne = {Declare_DeltaStateName}->add_{Definition_ProtoName}();
-*NewOne = ChanneldUtils::GetRefOfObject(PropItem);
+*NewOne = *ChanneldUtils::GetRefOfObject(PropItem);
 if (!bPropChanged)
 {
   bPropChanged = !(PropItem == ChanneldUtils::GetObjectByRef(&{Declare_FullStateName}->{Definition_ProtoName}()[i], {Code_GetWorldRef}));

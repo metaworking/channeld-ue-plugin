@@ -158,11 +158,11 @@ FString FArrayPropertyDecorator::GetCode_GetWorldRef()
 TArray<TSharedPtr<FStructPropertyDecorator>> FArrayPropertyDecorator::GetStructPropertyDecorators()
 {
 	TArray<TSharedPtr<FStructPropertyDecorator>> StructPropertyDecorators;
+	StructPropertyDecorators.Append(InnerProperty->GetStructPropertyDecorators());
 	if (InnerProperty->IsStruct())
 	{
 		StructPropertyDecorators.Add(StaticCastSharedPtr<FStructPropertyDecorator>(InnerProperty));
 	}
-	StructPropertyDecorators.Append(InnerProperty->GetStructPropertyDecorators());
 	TArray<TSharedPtr<FStructPropertyDecorator>> NonRepetitionStructPropertyDecorators;
 	TSet<FString> StructPropertyDecoratorNames;
 	for (TSharedPtr<FStructPropertyDecorator>& StructPropertyDecorator : StructPropertyDecorators)

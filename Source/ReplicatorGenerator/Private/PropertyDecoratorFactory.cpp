@@ -2,13 +2,16 @@
 
 #include "PropertyDecorator/ActorCompPropDecoratorBuilder.h"
 #include "PropertyDecorator/BaseDataTypePropertyDecorator.h"
+#include "PropertyDecorator/BoolPropertyDecoratorBuilder.h"
+#include "PropertyDecorator/EnumPropertyDecoratorBuilder.h"
 #include "PropertyDecorator/RotatorPropertyDecoratorBuilder.h"
 #include "PropertyDecorator/VectorPropertyDecoratorBuilder.h"
 
 FPropertyDecoratorFactory::FPropertyDecoratorFactory()
 {
-	HeadBuilder = MakeShared<FBytePropertyDecoratorBuilder>();
+	HeadBuilder = MakeShared<FEnumPropertyDecoratorBuilder>(); 
 	HeadBuilder
+		->SetNextBuilder(MakeShared<FBytePropertyDecoratorBuilder>())
 		->SetNextBuilder(MakeShared<FBoolPropertyDecoratorBuilder>())
 		->SetNextBuilder(MakeShared<FUInt32PropertyDecoratorBuilder>())
 		->SetNextBuilder(MakeShared<FIntPropertyDecoratorBuilder>())

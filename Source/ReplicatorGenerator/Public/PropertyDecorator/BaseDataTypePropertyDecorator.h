@@ -52,8 +52,6 @@ return new PropertyDecorator(Property, InOwner); \
 
 BASE_DATA_TYPE_PROPERTY_DECORATOR_WITH_BUILDER_BASE(FBytePropertyDecoratorBuilder, FBytePropertyDecorator, FByteProperty, uint8, uint32);
 
-BASE_DATA_TYPE_PROPERTY_DECORATOR_WITH_BUILDER(FBoolPropertyDecoratorBuilder, FBoolPropertyDecorator, FBoolProperty, bool);
-
 BASE_DATA_TYPE_PROPERTY_DECORATOR_WITH_BUILDER(FUInt32PropertyDecoratorBuilder, FUInt32PropertyDecorator, FUInt32Property, uint32);
 
 BASE_DATA_TYPE_PROPERTY_DECORATOR_WITH_BUILDER(FIntPropertyDecoratorBuilder, FIntPropertyDecorator, FIntProperty, int32);

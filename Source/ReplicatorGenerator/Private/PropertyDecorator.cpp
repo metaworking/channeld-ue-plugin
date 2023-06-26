@@ -1,7 +1,7 @@
 ﻿#include "PropertyDecorator.h"
 
 #include "ReplicatorGeneratorUtils.h"
-
+TSet<FString> FPropertyDecorator::GlobalIncludeFile;
 FPropertyDecorator::FPropertyDecorator(FProperty* InProperty, IPropertyDecoratorOwner* InOwner)
 	: Owner(InOwner), OriginalProperty(InProperty)
 {
@@ -149,15 +149,15 @@ FString FPropertyDecorator::GetCode_GetPropertyValueFrom(const FString& TargetIn
 	{
 		return FString::Printf(TEXT("%s->%s"), *TargetInstance, *GetPropertyName());
 	}
-	else
-	{
-		return TEXT("*") + GetPointerName();
-	}
+	return TEXT("*") + GetPointerName();
 }
 
 FString FPropertyDecorator::GetCode_SetPropertyValueTo(const FString& TargetInstance, const FString& NewStateName, const FString& AfterSetValueCode)
 {
-	return FString::Printf(TEXT("%s = %s;\nbStateChanged = true;\n%s"), *GetCode_GetPropertyValueFrom(TargetInstance), *GetCode_GetProtoFieldValueFrom(NewStateName), *AfterSetValueCode);
+	const FString ValueStr = GetCode_GetPropertyValueFrom(TargetInstance);
+	const FString FieldValueStr = GetCode_GetProtoFieldValueFrom(NewStateName);
+
+	return FString::Printf( TEXT("%s = %s;\nbStateChanged = true;\n%s"), *ValueStr, *FieldValueStr, *AfterSetValueCode);
 }
 
 FString FPropertyDecorator::GetDeclaration_PropertyPtr()
@@ -316,4 +316,9 @@ bool FPropertyDecorator::IsStruct()
 TArray<TSharedPtr<FStructPropertyDecorator>> FPropertyDecorator::GetStructPropertyDecorators()
 {
 	return TArray<TSharedPtr<FStructPropertyDecorator>>();
+}
+
+void FPropertyDecorator::AddGlobalIncludeFile(FString FileName)
+{
+	GlobalIncludeFile.Add(FileName);
 }

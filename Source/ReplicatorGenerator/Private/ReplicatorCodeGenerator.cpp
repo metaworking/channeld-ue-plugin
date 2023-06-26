@@ -10,6 +10,7 @@
 #include "ReplicatorTemplate/BlueprintReplicatorTemplate.h"
 #include "ReplicatorTemplate/CppReplicatorTemplate.h"
 #include "ReplicatorTemplate/GoProtoDataTemplate.h"
+#include "PropertyDecorator.h"
 
 bool FReplicatorCodeGenerator::RefreshModuleInfoByClassName()
 {
@@ -154,6 +155,10 @@ bool FReplicatorCodeGenerator::Generate(
 	// Global struct codes
 	auto GlobalStructDecorators = GetAllStructPropertyDecorators(ActorDecoratorsToGenReplicator);
 	ReplicationCodeBundle.GlobalStructCodes.Append(TEXT("#pragma once\n"));
+	for(auto HeaderFile : FPropertyDecorator::GetGlobalIncludeFile())
+	{
+		ReplicationCodeBundle.GlobalStructCodes.Append(FString::Printf(TEXT("#include \"%s\"\n"), *HeaderFile));
+	}
 	ReplicationCodeBundle.GlobalStructCodes.Append(TEXT("#include \"ChanneldUtils.h\"\n"));
 	ReplicationCodeBundle.GlobalStructCodes.Append(FString::Printf(TEXT("#include \"%s\"\n"), *GenManager_GlobalStructProtoHeaderFile));
 	for (auto StructDecorator : GlobalStructDecorators)
@@ -904,11 +909,11 @@ TArray<TSharedPtr<FStructPropertyDecorator>> FReplicatorCodeGenerator::GetAllStr
 	TSet<FString> StructPropertyDecoratorNames;
 	for (const TSharedPtr<FStructPropertyDecorator>& StructPropertyDecorator : AllStructPropertyDecorators)
 	{
-		if (StructPropertyDecoratorNames.Contains(StructPropertyDecorator->GetPropertyName()))
+		if (StructPropertyDecoratorNames.Contains(StructPropertyDecorator->GetCPPType()))
 		{
 			continue;
 		}
-		StructPropertyDecoratorNames.Add(StructPropertyDecorator->GetPropertyName());
+		StructPropertyDecoratorNames.Add(StructPropertyDecorator->GetCPPType());
 		NonRepetitionStructPropertyDecorators.Add(StructPropertyDecorator);
 	}
 	return NonRepetitionStructPropertyDecorators;
