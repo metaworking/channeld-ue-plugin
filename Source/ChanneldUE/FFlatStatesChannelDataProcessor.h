@@ -12,7 +12,7 @@ class CHANNELDUE_API FFlatStatesChannelDataProcessor : IChannelDataProcessor
 public:
 	virtual bool Merge(const google::protobuf::Message* SrcMsg, google::protobuf::Message* DstMsg) override;
 	virtual const google::protobuf::Message* GetStateFromChannelData(google::protobuf::Message* ChannelData,
-		UClass* TargetClass, uint32 NetGUID, bool& bIsRemoved) override;
+		UClass* TargetClass, UObject* TargetObject, uint32 NetGUID, bool& bIsRemoved) override;
 	virtual void SetStateToChannelData(const google::protobuf::Message* State, google::protobuf::Message* ChannelData,
-		UClass* TargetClass, uint32 NetGUID) override;
+		UClass* TargetClass, UObject* TargetObject, uint32 NetGUID) override;
 };

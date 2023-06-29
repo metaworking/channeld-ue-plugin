@@ -62,7 +62,7 @@ public:
 	UChanneldNetConnection* AddChanneldClientConnection(Channeld::ConnectionId ClientConnId, Channeld::ChannelId ChId);
 	void RemoveChanneldClientConnection(Channeld::ConnectionId ClientConnId);
 
-	void ReceivedRPC(AActor* Actor, const FName& FunctionName, const std::string& ParamsPayload, bool& bDeferredRPC);
+	void ReceivedRPC(AActor* Actor, const FName& FunctionName, const std::string& ParamsPayload, bool& bDeferredRPC, UObject* SubObject = nullptr);
 
 	UChanneldConnection* GetConnToChanneld() const { return ConnToChanneld; }
 

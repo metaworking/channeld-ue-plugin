@@ -281,7 +281,17 @@ void UChanneldNetDriver::HandleCustomRPC(TSharedPtr<unrealpb::RemoteFunctionMess
 	//TSet<FNetworkGUID> UnmappedGUID;
 	bool bDelayRPC = false;
 	FName FuncName = UTF8_TO_TCHAR(Msg->functionname().c_str());
-	ReceivedRPC(Actor, FuncName, Msg->paramspayload(), bDelayRPC);
+	UObject* SubObject = nullptr;
+	if (Msg->subobjectpath().length() > 0)
+	{
+		SubObject = Actor->GetDefaultSubobjectByName(Msg->subobjectpath().c_str());
+		if(!SubObject)
+		{
+			UE_LOG(LogChanneld, Log, TEXT("Actor:%s, NetGuid:%d can not find Subobject:%s for Function:%s"),
+				*Actor->GetName(),  Msg->targetobj().netguid(), *FString(Msg->subobjectpath().c_str()), *FuncName.ToString());
+		}
+	}
+	ReceivedRPC(Actor, FuncName, Msg->paramspayload(), bDelayRPC, SubObject);
 	if (bDelayRPC)
 	{
 		UE_LOG(LogChanneld, Log, TEXT("Deferred RPC '%s::%s' due to unmapped NetGUID: %d"), *Actor->GetName(), *FuncName.ToString(), Msg->targetobj().netguid());
@@ -886,8 +896,16 @@ void UChanneldNetDriver::ProcessRemoteFunction(class AActor* Actor, class UFunct
 		auto RepComp = Cast<UChanneldReplicationComponent>(Actor->FindComponentByClass(UChanneldReplicationComponent::StaticClass()));
 		if (RepComp)
 		{
+			UObject* TargetObject = Actor;
+			FString SubObjectPathName = "";
+			if (SubObject)
+			{
+				TargetObject = SubObject;
+				SubObjectPathName = SubObject->GetName();
+			}
+			
 			bool bSuccess = true;
-			auto ParamsMsg = RepComp->SerializeFunctionParams(Actor, Function, Parameters, OutParms, bSuccess);
+			auto ParamsMsg = RepComp->SerializeFunctionParams(TargetObject, Function, Parameters, OutParms, bSuccess);
 			if (bSuccess)
 			{
 				UE_CLOG(bShouldLog && ParamsMsg.IsValid(), LogChanneld, VeryVerbose, TEXT("Serialized RPC parameters: %s"), UTF8_TO_TCHAR(ParamsMsg->DebugString().c_str()));
@@ -897,7 +915,7 @@ void UChanneldNetDriver::ProcessRemoteFunction(class AActor* Actor, class UFunct
 				// Server -> Client multicast RPC
 				if (ConnToChanneld->IsServer() && (Function->FunctionFlags & FUNC_NetMulticast))
 				{
-					if (ChannelDataView->SendMulticastRPC(Actor, FuncName, ParamsMsg))
+					if (ChannelDataView->SendMulticastRPC(Actor, FuncName, ParamsMsg, SubObjectPathName))
 					{
 						return;
 					}
@@ -908,7 +926,7 @@ void UChanneldNetDriver::ProcessRemoteFunction(class AActor* Actor, class UFunct
 					UChanneldNetConnection* NetConn = ConnToChanneld->IsClient() ? GetServerConnection() : Cast<UChanneldNetConnection>(Actor->GetNetConnection());
 					if (NetConn)
 					{
-						NetConn->SendRPCMessage(Actor, FuncName, ParamsMsg, OwningChId);
+						NetConn->SendRPCMessage(Actor, FuncName, ParamsMsg, OwningChId, SubObjectPathName);
 						return;
 					}
 					UE_LOG(LogChanneld, Warning, TEXT("Failed to send RPC %s::%s as the actor doesn't have any NetConn"), *Actor->GetName(), *FuncName);
@@ -919,6 +937,10 @@ void UChanneldNetDriver::ProcessRemoteFunction(class AActor* Actor, class UFunct
 					unrealpb::RemoteFunctionMessage RpcMsg;
 					RpcMsg.mutable_targetobj()->set_netguid(GuidCache->GetNetGUID(Actor).Value);
 					RpcMsg.set_functionname(TCHAR_TO_UTF8(*FuncName), FuncName.Len());
+					if (!SubObjectPathName.IsEmpty())
+					{
+						RpcMsg.set_subobjectpath(TCHAR_TO_UTF8(*SubObjectPathName), SubObjectPathName.Len());
+					}
 					if (ParamsMsg)
 					{
 						RpcMsg.set_paramspayload(ParamsMsg->SerializeAsString());
@@ -956,15 +978,17 @@ void UChanneldNetDriver::OnSentRPC(const unrealpb::RemoteFunctionMessage& RpcMsg
 #endif
 }
 
-void UChanneldNetDriver::ReceivedRPC(AActor* Actor, const FName& FunctionName, const std::string& ParamsPayload, bool& bDeferredRPC)
+void UChanneldNetDriver::ReceivedRPC(AActor* Actor, const FName& FunctionName, const std::string& ParamsPayload, bool& bDeferredRPC, UObject* SubObject)
 {
 	const bool bShouldLog = FunctionName != ServerMovePackedFuncName && FunctionName != ClientMoveResponsePackedFuncName && FunctionName != ServerUpdateCameraFuncName;
 	UE_CLOG(bShouldLog,	LogChanneld, Verbose, TEXT("Received RPC %s::%s"), *Actor->GetName(), *FunctionName.ToString());
+
 	
-	UFunction* Function = Actor->FindFunction(FunctionName);
+	UObject* Obj = SubObject != nullptr ? SubObject : Actor;
+	UFunction* Function = Obj->FindFunction(FunctionName);
 	if (!Function)
 	{
-		UE_LOG(LogChanneld, Error, TEXT("RPC function %s doesn't exist on Actor %s"), *FunctionName.ToString(), *Actor->GetName());
+		UE_LOG(LogChanneld, Error, TEXT("RPC function %s doesn't exist on Obj %s"), *FunctionName.ToString(), *Actor->GetName());
 		return;
 	}
 
@@ -982,7 +1006,7 @@ void UChanneldNetDriver::ReceivedRPC(AActor* Actor, const FName& FunctionName, c
 	if (RepComp)
 	{
 		bool bSuccess = true;
-		TSharedPtr<void> Params = RepComp->DeserializeFunctionParams(Actor, Function, ParamsPayload, bSuccess, bDeferredRPC);
+		TSharedPtr<void> Params = RepComp->DeserializeFunctionParams(Obj, Function, ParamsPayload, bSuccess, bDeferredRPC);
 		if (bDeferredRPC)
 		{
 			return;
@@ -990,7 +1014,7 @@ void UChanneldNetDriver::ReceivedRPC(AActor* Actor, const FName& FunctionName, c
 
 		if (bSuccess)
 		{
-			Actor->ProcessEvent(Function, Params.Get());
+			Obj->ProcessEvent(Function, Params.Get());
 		}
 		else
 		{

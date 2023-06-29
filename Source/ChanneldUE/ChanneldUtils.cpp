@@ -347,12 +347,15 @@ UActorComponent* ChanneldUtils::GetActorComponentByRefChecked(const unrealpb::Ac
 	}
 
 	FName CompName = FName(UTF8_TO_TCHAR(Ref->compname().c_str()));
-	UObject* Comp = Actor->GetDefaultSubobjectByName(CompName);
-	if (Comp)
-	{
-		return Cast<UActorComponent>(Comp);
-	}
 
+	auto Components = Actor->GetComponents();
+	for(auto C : Components)
+	{
+		if (C->GetFName().IsEqual(CompName))
+		{
+			return C;
+		}
+	}
 	UE_LOG(LogChanneld, Warning, TEXT("Cannot find component '%s' of actor %s"), *CompName.ToString(), *Actor->GetName());
 	return nullptr;
 }

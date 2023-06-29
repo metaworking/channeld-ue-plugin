@@ -294,7 +294,7 @@ void UChanneldNetConnection::SendDestroyMessage(UObject* Object, EChannelCloseRe
 	}
 }
 
-void UChanneldNetConnection::SendRPCMessage(AActor* Actor, const FString& FuncName, TSharedPtr<google::protobuf::Message> ParamsMsg, Channeld::ChannelId ChId)
+void UChanneldNetConnection::SendRPCMessage(AActor* Actor, const FString& FuncName, TSharedPtr<google::protobuf::Message> ParamsMsg, Channeld::ChannelId ChId, const FString& SubObjectPath)
 {
 	if (GetMutableDefault<UChanneldSettings>()->bQueueUnexportedActorRPC)
 	{
@@ -317,6 +317,10 @@ void UChanneldNetConnection::SendRPCMessage(AActor* Actor, const FString& FuncNa
 	// RpcMsg.mutable_targetobj()->MergeFrom(*ChanneldUtils::GetRefOfObject(Actor));
 	RpcMsg.mutable_targetobj()->set_netguid(Driver->GuidCache->GetNetGUID(Actor).Value);
 	RpcMsg.set_functionname(TCHAR_TO_UTF8(*FuncName), FuncName.Len());
+	if (!SubObjectPath.IsEmpty())
+	{
+		RpcMsg.set_subobjectpath(TCHAR_TO_UTF8(*SubObjectPath), SubObjectPath.Len());
+	}
 	if (ParamsMsg)
 	{
 		RpcMsg.set_paramspayload(ParamsMsg->SerializeAsString());

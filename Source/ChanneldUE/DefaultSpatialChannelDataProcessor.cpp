@@ -36,7 +36,7 @@ bool FDefaultSpatialChannelDataProcessor::UpdateChannelData(UObject* TargetObj, 
 }
 
 const google::protobuf::Message* FDefaultSpatialChannelDataProcessor::GetStateFromChannelData(
-	google::protobuf::Message* ChannelData, UClass* TargetClass, uint32 NetGUID, bool& bIsRemoved)
+	google::protobuf::Message* ChannelData, UClass* TargetClass, UObject* TargetObject, uint32 NetGUID, bool& bIsRemoved)
 {
 	if (TargetClass != UObject::StaticClass())
 	{
@@ -58,7 +58,7 @@ const google::protobuf::Message* FDefaultSpatialChannelDataProcessor::GetStateFr
 }
 
 void FDefaultSpatialChannelDataProcessor::SetStateToChannelData(const google::protobuf::Message* State,
-	google::protobuf::Message* ChannelData, UClass* TargetClass, uint32 NetGUID)
+	google::protobuf::Message* ChannelData, UClass* TargetClass, UObject* TargetObject, uint32 NetGUID)
 {
 	if (TargetClass != UObject::StaticClass())
 	{

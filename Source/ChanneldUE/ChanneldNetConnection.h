@@ -57,7 +57,7 @@ public:
 	 */
 	void SendSpawnMessage(UObject* Object, ENetRole Role = ENetRole::ROLE_None, uint32 OwningChannelId = Channeld::InvalidChannelId, uint32 OwningConnId = 0, FVector* Location = nullptr);
 	void SendDestroyMessage(UObject* Object, EChannelCloseReason Reason = EChannelCloseReason::Destroyed);
-	void SendRPCMessage(AActor* Actor, const FString& FuncName, TSharedPtr<google::protobuf::Message> ParamsMsg = nullptr, Channeld::ChannelId ChId = Channeld::InvalidChannelId);
+	void SendRPCMessage(AActor* Actor, const FString& FuncName, TSharedPtr<google::protobuf::Message> ParamsMsg = nullptr, Channeld::ChannelId ChId = Channeld::InvalidChannelId, const FString& SubObjectPath = "");
 	// Flush the handshake packets that are queued before received AuthResultMessage to the server.
 	void FlushUnauthData();
 

@@ -86,7 +86,7 @@ public:
 	virtual Channeld::ChannelId GetOwningChannelId(const FNetworkGUID NetId) const;
 	virtual Channeld::ChannelId GetOwningChannelId(AActor* Actor) const;
 
-	virtual bool SendMulticastRPC(AActor* Actor, const FString& FuncName, TSharedPtr<google::protobuf::Message> ParamsMsg);
+	virtual bool SendMulticastRPC(AActor* Actor, const FString& FuncName, TSharedPtr<google::protobuf::Message> ParamsMsg, const FString& SubObjectPathName);
 
 	int32 SendChannelUpdate(Channeld::ChannelId ChId);
 	int32 SendAllChannelUpdates();

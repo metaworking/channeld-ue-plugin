@@ -637,7 +637,8 @@ bool FReplicatorCodeGenerator::GenerateChannelDataProtoDefFile(
 	}
 	for (const TSharedPtr<FReplicatedActorDecorator> ActorDecorator : TargetActors)
 	{
-		ChannelDataFields.Append(ActorDecorator->GetCode_ChannelDataProtoFieldDefinition(++I));
+		FString ChannelDataField = ActorDecorator->GetCode_ChannelDataProtoFieldDefinition(++I);
+		ChannelDataFields.Append(ChannelDataField);
 		if (!ActorDecorator->IsChanneldUEBuiltinType())
 		{
 			ImportCode.Append(FString::Printf(TEXT("import \"%s\";\n"), *ActorDecorator->GetProtoDefinitionsFileName()));
@@ -715,7 +716,12 @@ bool FReplicatorCodeGenerator::GenerateChannelDataMerge_GoCode(
 				else
 				{
 					bHasMergeStateInMap = true;
-					MergeStateCode.Append(FString::Format(ActorDecorator->GetTargetClass()->IsChildOf<UActorComponent>() ? CodeGen_Go_MergeCompStateInMapTemplate : CodeGen_Go_MergeStateInMapTemplate, FormatArgs));
+					const TCHAR* CodeGen_GoTemplate = ActorDecorator->GetTargetClass()->IsChildOf<UActorComponent>() ? CodeGen_Go_MergeCompStateInMapTemplate : CodeGen_Go_MergeStateInMapTemplate;
+					if (ActorDecorator->GetTargetClass() == UActorComponent::StaticClass())
+					{
+						CodeGen_GoTemplate = CodeGen_Go_MergeStateInMapTemplate;
+					}
+					MergeStateCode.Append(FString::Format(CodeGen_GoTemplate, FormatArgs));
 				}
 			}
 		}

@@ -83,7 +83,36 @@ else
 {Code_DoMerge}
 }
 )EOF";
-
+static const TCHAR* ActorDecor_GetStateFromChannelData_AC_Singleton =
+	LR"EOF(
+if({Code_Condition}) {
+  auto States = {Declaration_ChannelDataMessage}->mutable_{Definition_ChannelDataFieldName}();
+  const std::string name = TCHAR_TO_UTF8(*TargetObject->GetName());
+  if (States->states().contains(name))
+  {
+	const auto State = &States->states().at(name);
+	bIsRemoved = State->removed();
+	return State;	
+  }
+}
+)EOF";
+static const TCHAR* ActorDecor_GetStateFromChannelData_AC =
+	LR"EOF(
+if({Code_Condition}) {
+  auto States = {Declaration_ChannelDataMessage}->mutable_{Definition_ChannelDataFieldName}();
+  if (States->contains(NetGUID))
+  {
+	const std::string name = TCHAR_TO_UTF8(*TargetObject->GetName());
+	const auto NameStates = &States->at(NetGUID);
+	if (NameStates->states().contains(name))
+	{
+		const auto State = &NameStates->states().at(name);
+		bIsRemoved = State->removed();
+		return State;	
+	}
+  }
+}
+)EOF";
 static const TCHAR* ActorDecor_ChannelDataProcessorMerge_DoMarge =
 	LR"EOF(
 if (Dst->{Definition_ChannelDataFieldName}().contains(Pair.first))
@@ -122,6 +151,33 @@ if({Code_Condition}) {
 }
 )EOF";
 
+static const TCHAR* ActorDecor_SetStateToChannelData_AC_Singleton =
+	LR"EOF(
+if({Code_Condition}) {
+  auto AccessibleState = State != nullptr ? State : Removed{Definition_ProtoStateMsgName}.Get();
+  if (AccessibleState)
+  {
+	auto States = {Declaration_ChannelDataMessage}->mutable_actorcomponentstates();
+	const unrealpb::ActorComponentState state = *static_cast<const unrealpb::ActorComponentState*>(AccessibleState);
+	const std::string compname = TCHAR_TO_UTF8(*TargetObject->GetName());
+	States->mutable_states()->emplace(compname, state);
+  }
+}
+)EOF";
+
+static const TCHAR* ActorDecor_SetStateToChannelData_AC =
+	LR"EOF(
+if({Code_Condition}) {
+  auto AccessibleState = State != nullptr ? State : Removed{Definition_ProtoStateMsgName}.Get();
+  if (AccessibleState)
+  {
+	auto States = {Declaration_ChannelDataMessage}->mutable_actorcomponentstatess();
+	const unrealpb::ActorComponentState state = *static_cast<const unrealpb::ActorComponentState*>(AccessibleState);
+	const std::string compname = TCHAR_TO_UTF8(*TargetObject->GetName());
+	(*States)[NetGUID].mutable_states()->emplace(compname, state);
+  }
+}
+)EOF";
 static const TCHAR* ActorDecor_SetStateToChannelData_Removable =
 	LR"EOF(
 if({Code_Condition}) {

@@ -11,7 +11,7 @@ bool FFlatStatesChannelDataProcessor::Merge(const google::protobuf::Message* Src
 	return false;
 }
 
-const google::protobuf::Message* FFlatStatesChannelDataProcessor::GetStateFromChannelData(google::protobuf::Message* ChannelData, UClass* TargetClass, uint32 NetGUID, bool& bIsRemoved)
+const google::protobuf::Message* FFlatStatesChannelDataProcessor::GetStateFromChannelData(google::protobuf::Message* ChannelData, UClass* TargetClass, UObject* TargetObject,  uint32 NetGUID, bool& bIsRemoved)
 {
 	bIsRemoved = false;
 	auto StateInProto = ChanneldReplication::FindReplicatorStateInProto(TargetClass);
@@ -64,7 +64,7 @@ const google::protobuf::Message* FFlatStatesChannelDataProcessor::GetStateFromCh
 	return State;
 }
 
-void FFlatStatesChannelDataProcessor::SetStateToChannelData(const google::protobuf::Message* State,google::protobuf::Message* ChannelData, UClass* TargetClass, uint32 NetGUID)
+void FFlatStatesChannelDataProcessor::SetStateToChannelData(const google::protobuf::Message* State,google::protobuf::Message* ChannelData, UClass* TargetClass, UObject* TargetObject, uint32 NetGUID)
 {
 	auto StateInProto = ChanneldReplication::FindReplicatorStateInProto(TargetClass);
 	if (!StateInProto)

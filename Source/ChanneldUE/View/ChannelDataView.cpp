@@ -626,11 +626,12 @@ Channeld::ChannelId UChannelDataView::GetOwningChannelId(AActor* Actor) const
 	return GetOwningChannelId(GetNetId(Actor));
 }
 
-bool UChannelDataView::SendMulticastRPC(AActor* Actor, const FString& FuncName, TSharedPtr<google::protobuf::Message> ParamsMsg)
+bool UChannelDataView::SendMulticastRPC(AActor* Actor, const FString& FuncName, TSharedPtr<google::protobuf::Message> ParamsMsg, const FString& SubObjectPathName)
 {
 	unrealpb::RemoteFunctionMessage RpcMsg;
 	RpcMsg.mutable_targetobj()->set_netguid(GetNetId(Actor).Value);
 	RpcMsg.set_functionname(TCHAR_TO_UTF8(*FuncName), FuncName.Len());
+	RpcMsg.set_subobjectpath(TCHAR_TO_UTF8(*SubObjectPathName), SubObjectPathName.Len());
 	if (ParamsMsg)
 	{
 		RpcMsg.set_paramspayload(ParamsMsg->SerializeAsString());
