@@ -251,99 +251,126 @@ void UChanneldConnection::Receive()
 	if (Socket->Recv(ReceiveBuffer + ReceiveBufferOffset, ReceiveBufferSize, BytesRead, ESocketReceiveFlags::None))
 	{
 		ReceiveBufferOffset += BytesRead;
-		if (ReceiveBufferOffset < HeaderSize)
-		{
-			// Unfinished packet
-			UE_LOG(LogChanneld, Verbose, TEXT("UChanneldConnection::Receive: unfinished packet header: %d"), BytesRead);
-			UChanneldMetrics* Metrics = GEngine->GetEngineSubsystem<UChanneldMetrics>();
-			Metrics->FragmentedPacket_Counter->Increment();
-			return;
-		}
-
-		if (ReceiveBuffer[0] != 67 || ReceiveBuffer[1] != 72)
-		{
-			ReceiveBufferOffset = 0;
-			UE_LOG(LogChanneld, Error, TEXT("Invalid tag: %d, the packet will be dropped"), ReceiveBuffer[0]);
-			UChanneldMetrics* Metrics = GEngine->GetEngineSubsystem<UChanneldMetrics>();
-			Metrics->DroppedPacket_Counter->Increment();
-			return;
-		}
-
-		uint32 PacketSize = ReceiveBuffer[3] | (ReceiveBuffer[2]<<8);
+		// if (ReceiveBufferOffset < HeaderSize)
+		// {
+		// 	// Unfinished packet
+		// 	UE_LOG(LogChanneld, Verbose, TEXT("UChanneldConnection::Receive: unfinished packet header: %d"), BytesRead);
+		// 	UChanneldMetrics* Metrics = GEngine->GetEngineSubsystem<UChanneldMetrics>();
+		// 	Metrics->FragmentedPacket_Counter->Increment();
+		// 	return;
+		// }
 		
-		if (ReceiveBufferOffset < HeaderSize + PacketSize)
+		while (ReceiveBufferOffset > HeaderSize)
 		{
-			// Unfinished packet
-			UE_LOG(LogChanneld, Verbose, TEXT("UChanneldConnection::Receive: unfinished packet body, read: %d, pos: %d/%d"), BytesRead, ReceiveBufferOffset, HeaderSize + PacketSize);
-			UChanneldMetrics* Metrics = GEngine->GetEngineSubsystem<UChanneldMetrics>();
-			Metrics->FragmentedPacket_Counter->Increment();
-			return;
-		}
-
-		// TODO: support Snappy compression
-
-		channeldpb::Packet Packet;
-		if (!Packet.ParseFromArray(ReceiveBuffer + HeaderSize, PacketSize))
-		{
-			ReceiveBufferOffset = 0;
-			UE_LOG(LogChanneld, Error, TEXT("UChanneldConnection::Receive: Failed to parse packet, size: %d"), PacketSize);
-			UChanneldMetrics* Metrics = GEngine->GetEngineSubsystem<UChanneldMetrics>();
-			Metrics->DroppedPacket_Counter->Increment();
-			return;
-		}
-
-		for (auto const& MessagePackData : Packet.messages())
-		{
-			uint32 MsgType = MessagePackData.msgtype();
-
-			MessageHandlerEntry Entry;
-			if (!MessageHandlers.Contains(MsgType))
+			if (ReceiveBuffer[0] != 67 || ReceiveBuffer[1] != 72)
 			{
-				if (MsgType >= channeldpb::USER_SPACE_START)
+				ReceiveBufferOffset = 0;
+				UE_LOG(LogChanneld, Error, TEXT("Invalid tag: %d, the packet will be dropped"), ReceiveBuffer[0]);
+				UChanneldMetrics* Metrics = GEngine->GetEngineSubsystem<UChanneldMetrics>();
+				Metrics->DroppedPacket_Counter->Increment();
+				return;
+			}
+			
+			uint32 PacketSize = ReceiveBuffer[3] | (ReceiveBuffer[2] << 8);
+
+			UE_LOG(LogChanneld, Warning, TEXT("ReceiveBufferOffset: %d, PacketSize:%d"), ReceiveBufferOffset,
+			       PacketSize);
+
+			if (ReceiveBufferOffset < HeaderSize + PacketSize)
+			{
+				// Unfinished packet
+				UE_LOG(LogChanneld, Verbose,
+				       TEXT("UChanneldConnection::Receive: unfinished packet body, read: %d, pos: %d/%d"), BytesRead,
+				       ReceiveBufferOffset, HeaderSize + PacketSize);
+				UChanneldMetrics* Metrics = GEngine->GetEngineSubsystem<UChanneldMetrics>();
+				Metrics->FragmentedPacket_Counter->Increment();
+				return;
+			}
+
+			// TODO: support Snappy compression
+
+			channeldpb::Packet Packet;
+			if (!Packet.ParseFromArray(ReceiveBuffer + HeaderSize, PacketSize))
+			{
+				ReceiveBufferOffset = 0;
+				UE_LOG(LogChanneld, Error, TEXT("UChanneldConnection::Receive: Failed to parse packet, size: %d"),
+				       PacketSize);
+				UChanneldMetrics* Metrics = GEngine->GetEngineSubsystem<UChanneldMetrics>();
+				Metrics->DroppedPacket_Counter->Increment();
+				return;
+			}
+
+			// move buff
+			uint32 moveLen = PacketSize + HeaderSize;
+			for (int i = 0; i < ReceiveBufferOffset - moveLen; ++i)
+			{
+				ReceiveBuffer[i] = ReceiveBuffer[moveLen + i];
+			}
+			//ReceiveBuffer += moveLen;
+			
+			ReceiveBufferOffset -= moveLen;
+
+
+
+			for (auto const& MessagePackData : Packet.messages())
+			{
+				uint32 MsgType = MessagePackData.msgtype();
+
+				MessageHandlerEntry Entry;
+				if (!MessageHandlers.Contains(MsgType))
 				{
-					Entry = UserSpaceMessageHandlerEntry;
+					if (MsgType >= channeldpb::USER_SPACE_START)
+					{
+						Entry = UserSpaceMessageHandlerEntry;
+					}
+					else
+					{
+						UE_LOG(LogChanneld, Warning, TEXT("No message handler registered for type: %d"),
+						       MessagePackData.msgtype());
+						continue;
+					}
 				}
 				else
 				{
-					UE_LOG(LogChanneld, Warning, TEXT("No message handler registered for type: %d"), MessagePackData.msgtype());
+					Entry = MessageHandlers[MsgType];
+				}
+
+				if (Entry.Msg == nullptr)
+				{
+					UE_LOG(LogChanneld, Error, TEXT("No message template registered for type: %d"),
+					       MessagePackData.msgtype());
 					continue;
 				}
-			}
-			else
-			{
-				Entry = MessageHandlers[MsgType];
-			}
 
-			if (Entry.Msg == nullptr)
-			{
-				UE_LOG(LogChanneld, Error, TEXT("No message template registered for type: %d"), MessagePackData.msgtype());
-				continue;
-			}
+				// Always make a clone!
+				google::protobuf::Message* Msg = Entry.Msg->New();
+				Msg->CopyFrom(*Entry.Msg);
+				if (!Msg->ParseFromString(MessagePackData.msgbody()))
+				{
+					UE_LOG(LogChanneld, Error, TEXT("Failed to parse message %s"),
+					       UTF8_TO_TCHAR(Msg->GetTypeName().c_str()));
+					continue;
+				}
 
-			// Always make a clone!
-			google::protobuf::Message* Msg = Entry.Msg->New();
-			Msg->CopyFrom(*Entry.Msg);
-			if (!Msg->ParseFromString(MessagePackData.msgbody()))
-			{
-				UE_LOG(LogChanneld, Error, TEXT("Failed to parse message %s"), UTF8_TO_TCHAR(Msg->GetTypeName().c_str()));
-				continue;
+				MessageQueueEntry QueueEntry = {
+					MsgType, Msg, MessagePackData.channelid(), MessagePackData.stubid(), Entry.Handlers, Entry.Delegate
+				};
+				IncomingQueue.Enqueue(QueueEntry);
 			}
-
-			MessageQueueEntry QueueEntry = {MsgType, Msg, MessagePackData.channelid(), MessagePackData.stubid(), Entry.Handlers, Entry.Delegate };
-			IncomingQueue.Enqueue(QueueEntry);
 		}
-
 	}
 	else
 	{
 		OnDisconnected();
 		// Handle disconnection or exception
-		UE_LOG(LogChanneld, Warning, TEXT("Failed to receive data from channeld"));
+		UE_LOG(LogChanneld, Warning, TEXT("Failed to receive data "));
 	}
 
 	// Reset read position
-	ReceiveBufferOffset = 0;
+	// ReceiveBufferOffset = 0;
 }
+
+
 
 bool UChanneldConnection::StartReceiveThread()
 {
